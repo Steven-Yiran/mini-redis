@@ -1,6 +1,6 @@
 # MyRedis C++
 
-Simple-Redis is a simplified implementation of a Redis-like in-memory data store, written mainly in C++. It is intended to be used as a demonstration of key networking and data structure concepts. This project is inspired by the Mini-Redis project on [build-your-own.org](https://build-your-own.org/).
+MyRedis is a simplified implementation of a Redis-like in-memory data store, written mainly in C++. It is intended to be used as a demonstration of key networking and data structure concepts. This project is inspired by the Mini-Redis project on [build-your-own.org](https://build-your-own.org/).
 
 ## Features
 
