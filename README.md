@@ -10,7 +10,7 @@ MyRedis is a simplified implementation of a Redis-like in-memory data store, wri
 
 ## Getting Started
 
-1. Clone the repository: 'git clone https://github.com/Steven-Yiran/my-redis'
+1. Clone the repository: `git clone https://github.com/Steven-Yiran/my-redis`
 2. Build the executable with `make`
 3. Start the Redis server: `./server`
 4. Open another terminal and interact with the server with: `./client`.
