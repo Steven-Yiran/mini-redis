@@ -22,14 +22,14 @@ const size_t K_MAX_MSG = 4096;
     const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
     (type *)( (char *)__mptr - offsetof(type, member) );})
 
-
+// connection fd states
 enum {
     STATE_REQ = 0,
     STATE_RES = 1,
     STATE_END = 2, // mark the connection for deletion
 };
 
-
+// data seralization
 enum {
     SER_NIL = 0,
     SER_ERR = 1,
@@ -38,7 +38,7 @@ enum {
     SER_ARR = 4,
 };
 
-
+// response errors
 enum {
     ERR_UNKNOWN = 1,
     ERR_2BIG = 2,
@@ -56,13 +56,11 @@ struct Conn {
     uint8_t wbuf[4 + K_MAX_MSG];
 };
 
-
 struct Entry {
     struct HNode node;
     std::string key;
     std::string val;
 };
-
 
 static struct {
     HMap db;
@@ -72,13 +70,11 @@ static void msg(const char *msg) {
     fprintf(stderr, "%s\n", msg);
 }
 
-
 static void die(const char *msg) {
     int err = errno;
     fprintf(stderr, "[%d] %s\n", err, msg);
     abort();
 }
-
 
 static void fd_set_nb(int fd) {
     errno = 0;
@@ -97,14 +93,12 @@ static void fd_set_nb(int fd) {
     }
 }
 
-
 static void conn_put(std::vector<Conn *> &fd2conn, struct Conn *conn) {
     if (fd2conn.size() <= (size_t)conn->fd) {
         fd2conn.resize(conn->fd + 1);
     }
     fd2conn[conn->fd] = conn;
 }
-
 
 static int32_t accept_new_conn(std::vector<Conn *> &fd2conn, int fd) {
     // accept
@@ -162,8 +156,6 @@ static bool try_flush_buffer(Conn *conn) {
     return true;
 }
 
-
-
 static void state_res(Conn *conn) {
     while (try_flush_buffer(conn)) {}
 }
@@ -216,13 +208,11 @@ static void out_arr(std::string &out, uint32_t n) {
     out.append((char *)&n, 4);
 }
 
-
 enum {
     RES_OK = 0,
     RES_ERR = 1,
     RES_NX = 2,
 };
-
 
 static bool entry_eq(HNode *lhs, HNode *rhs) {
     struct Entry *le = container_of(lhs, struct Entry, node);
@@ -238,7 +228,7 @@ static void do_get(std::vector<std::string> &cmd, std::string &out) {
 
     HNode *node = hm_lookup(&g_data.db, &key.node, &entry_eq);
     if (!node) {
-        out_nil(out);
+        return out_nil(out);
     }
 
     const std::string &val = container_of(node, Entry, node)->val;
@@ -356,7 +346,6 @@ static void do_request(std::vector<std::string> &cmd, std::string &out) {
     }
 }
 
-
 static bool try_one_request(Conn *conn) {
     // try to parse a request from the buffer
     if (conn->rbuf_size < 4) {
@@ -418,11 +407,12 @@ static bool try_fill_buffer(Conn *conn) {
     // try to fill the buffer
     assert(conn->rbuf_size < sizeof(conn->rbuf));
     ssize_t rv = 0;
-    do {
-        size_t cap = sizeof(conn->rbuf) - conn->rbuf_size;
-        rv = read(conn->fd, &conn->rbuf[conn->rbuf_size], cap);
-        printf("read %ld bytes", rv);
-    } while (rv < 0 && errno == EINTR);
+    // do {
+    //     size_t cap = sizeof(conn->rbuf) - conn->rbuf_size;
+    //     rv = read(conn->fd, &conn->rbuf[conn->rbuf_size], cap);
+    // } while (rv < 0 && errno == EINTR);
+    size_t cap = sizeof(conn->rbuf) - conn->rbuf_size;
+    rv = read(conn->fd, &conn->rbuf[conn->rbuf_size], cap);
     if (rv < 0 && errno == EAGAIN) {
         // got EAGAIN, stop
         return false;
@@ -476,19 +466,21 @@ int main() {
 
     int val = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val));
+
     // bind
     struct sockaddr_in addr = {};
     addr.sin_family = AF_INET;
     addr.sin_port = ntohs(1234);
     addr.sin_addr.s_addr = ntohl(0);
     int rv = bind(fd, (const sockaddr *)&addr, sizeof(addr));
-    if (rv) 
+    if (rv) {
         die("bind()");
+    }
     
     // listen
-    rv = listen(fd, SOMAXCONN);
-    if (rv)
-        die("listen");
+    if ((rv = listen(fd, SOMAXCONN)) == -1) {
+        die("listen()");
+    }
 
     // a map of all client connections, keyed by fd
     std::vector<Conn *> fd2conn;
@@ -520,7 +512,7 @@ int main() {
         // the timeout argument doesn't matter here
         int rv = poll(poll_args.data(), (nfds_t)poll_args.size(), 1000);
         if (rv < 0) {
-            die("poll() error");
+            die("poll()");
         }
         // process active connections
         for (size_t i = 1; i < poll_args.size(); ++i) {
